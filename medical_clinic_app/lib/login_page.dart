@@ -2,14 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'registration_page.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'registration_page.dart';
 import 'home_page.dart';
+import 'package:medical_clinic_app/services/token_storage.dart'; // Adjust the path as needed
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _LoginPageState createState() => _LoginPageState();
 }
 
@@ -21,12 +22,33 @@ class _LoginPageState extends State<LoginPage> {
   // New variable for password visibility
   bool _isPasswordVisible = false;
 
+  // Handle login success by saving token and patientId and navigating
+  void handleLoginSuccess(String token, String patientId) async {
+    // Save the token
+    await saveToken(token);
+
+    // Save the patientId if needed for local use
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('patientId', patientId);
+
+    // Navigate to the home page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HomePage(
+          userName: _usernameController.text,
+          patientId: patientId,
+        ),
+      ),
+    );
+  }
+
   // Login method
   Future<void> _login() async {
     final String username = _usernameController.text;
     final String password = _passwordController.text;
 
-    const String url = 'http://localhost:3000/api/login'; // Replace <YOUR_IP_ADDRESS> with your actual IP address
+    const String url = 'http://localhost:3000/api/login'; // Replace with your actual endpoint
 
     try {
       final response = await http.post(
@@ -43,16 +65,15 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         // Successful login
         final responseBody = json.decode(response.body);
-        Navigator.pushReplacement(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(builder: (context) => HomePage(userName: username)),
-      );
-        final token = responseBody['token'];
+        final token = responseBody['token']; // API token key
+        final patientId = responseBody['patientId']; // Extract patientId
+
         if (kDebugMode) {
-          print('Login successful! Token: $token');
+          print('Login successful! Token: $token, PatientId: $patientId');
         }
-        // Navigate to another screen if needed
+
+        // Handle login success
+        handleLoginSuccess(token, patientId);
       } else {
         setState(() {
           _errorMessage = 'Invalid username or password';
@@ -79,8 +100,8 @@ class _LoginPageState extends State<LoginPage> {
             Center(
               child: Image.network(
                 'https://s3-media0.fl.yelpcdn.com/bphoto/kROaBMMNs2u1t9RHYMbv9g/1000s.jpg',
-                width: 100, 
-                height: 100, 
+                width: 100,
+                height: 100,
               ),
             ),
             const Text(
@@ -133,7 +154,9 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RegistrationPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const RegistrationPage(),
+                  ),
                 );
               },
               child: const Text('Register'),

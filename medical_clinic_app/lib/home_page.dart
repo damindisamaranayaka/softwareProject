@@ -5,17 +5,21 @@ import 'view_profile.dart';
 
 class HomePage extends StatelessWidget {
   final String userName;
+  final String patientId;
 
-  const HomePage({super.key, required this.userName});
+  const HomePage({required this.userName, required this.patientId, super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+        title: Text('Welcome $userName'),
+        backgroundColor: const Color.fromARGB(255, 99, 181, 249),
+      ),
       body: Container(
-        color: const Color.fromARGB(255, 255, 255, 255), // Background color fills the whole screen
+        color: const Color.fromARGB(255, 255, 255, 255), // Background color
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch, // Ensures the Row fills the screen height
+          crossAxisAlignment: CrossAxisAlignment.stretch, // Ensures Row fills screen height
           children: [
             Container(
               color: const Color.fromARGB(187, 10, 216, 213),
@@ -35,11 +39,11 @@ class HomePage extends StatelessWidget {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        // Navigate to GeneralPatientInformation page
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const GeneralPatientInformation()), // Updated navigation
+                            builder: (context) => GeneralPatientInformation(patientId: patientId),
+                          ),
                         );
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 99, 181, 249)),
@@ -48,11 +52,10 @@ class HomePage extends StatelessWidget {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        // Navigate to the ViewProfile page
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ViewProfile(userName: userName), // Pass userName to ViewProfile
+                            builder: (context) => ViewProfile(userId: patientId), // Pass userName to ViewProfile
                           ),
                         );
                       },
@@ -61,7 +64,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     for (var text in [
-                      'View Your Profile',
+                      
                       'Make an Appointment',
                       'View Test Results',
                       'View Prescription',
@@ -81,7 +84,6 @@ class HomePage extends StatelessWidget {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        // Log out and navigate back to LoginPage
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -125,7 +127,17 @@ class HomePage extends StatelessWidget {
                       width: 100,
                       height: 100,
                     ),
-                    const SizedBox(height: 20),
+                   /* const SizedBox(height: 20),
+                    Text(
+                      'Patient ID: $patientId',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,  
+                    ),  */
+                    const SizedBox(height: 10),
                     const Text(
                       'The Best Medical Clinic for You!',
                       style: TextStyle(fontSize: 16, color: Colors.black54),

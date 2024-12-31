@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:medical_clinic_app/services/patient_service.dart';
 
 class PatientMedicalHistory extends StatefulWidget {
-  const PatientMedicalHistory({super.key});
+  final String patientId; // Pass the patient ID
+  const PatientMedicalHistory({super.key, required this.patientId});
 
   @override
   _PatientMedicalHistoryState createState() => _PatientMedicalHistoryState();
@@ -11,7 +13,8 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
   final TextEditingController _drugAllergiesController = TextEditingController();
   final TextEditingController _otherIllnessesController = TextEditingController();
   final TextEditingController _currentMedicationsController = TextEditingController();
-
+  
+  // List of medical conditions
   final List<String> _conditions = [
     'High Blood Pressure',
     'Cancer',
@@ -19,12 +22,17 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
     'Kidney Disease',
     'Lung Disease'
   ];
-  final List<bool> _selectedConditions = List.generate(5, (index) => false);
 
-  void _saveMedicalHistory() {
-    final allergies = _drugAllergiesController.text;
-    final illnesses = _otherIllnessesController.text;
-    final medications = _currentMedicationsController.text;
+  // State to track checkbox selections
+  final List<bool> _selectedConditions = List.generate(5, (index) => false);
+  
+  final PatientService _patientService = PatientService();
+
+  Future<void> _saveMedicalHistory() async {
+    // Gather user inputs
+    final allergies = _drugAllergiesController.text.trim();
+    final illnesses = _otherIllnessesController.text.trim();
+    final medications = _currentMedicationsController.text.trim();
     final selectedConditions = _conditions
         .asMap()
         .entries
@@ -32,17 +40,52 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
         .map((entry) => entry.value)
         .toList();
 
-    print('Drug Allergies: $allergies');
-    print('Selected Conditions: $selectedConditions');
-    print('Other Illnesses: $illnesses');
-    print('Current Medications: $medications');
+    // Basic validation
+    if (allergies.isEmpty &&
+        illnesses.isEmpty &&
+        medications.isEmpty &&
+        selectedConditions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in at least one field.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Medical history saved successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    // Construct medical history data
+    final medicalHistory = {
+      "drugAllergies": allergies,
+      "conditions": selectedConditions, // Updated key
+      "otherIllnesses": illnesses,
+      "currentMedications": medications,
+    };
+
+    // Debugging log for medical history data
+    print('Medical history being sent: $medicalHistory');
+
+    // Save to backend using the service
+    bool isSaved =
+        await _patientService.saveMedicalHistory(widget.patientId, medicalHistory);
+
+    // Provide user feedback
+    if (isSaved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Medical history saved successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to save medical history.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -97,7 +140,7 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
               TextField(
                 controller: _drugAllergiesController,
                 maxLines: 3,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Enter allergies',
                 ),
@@ -115,9 +158,11 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
                     title: Text(condition),
                     value: _selectedConditions[index],
                     onChanged: (value) {
-                      setState(() {
-                        _selectedConditions[index] = value!;
-                      });
+                      if (value != null) {
+                        setState(() {
+                          _selectedConditions[index] = value;
+                        });
+                      }
                     },
                   );
                 }).toList(),
@@ -131,7 +176,7 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
               TextField(
                 controller: _otherIllnessesController,
                 maxLines: 3,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Enter other illnesses',
                 ),
@@ -145,7 +190,7 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
               TextField(
                 controller: _currentMedicationsController,
                 maxLines: 3,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Enter medications',
                 ),
@@ -158,21 +203,16 @@ class _PatientMedicalHistoryState extends State<PatientMedicalHistory> {
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.grey),
                     child: const Text("Back"),
                   ),
                   ElevatedButton(
                     onPressed: _saveMedicalHistory,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.green),
                     child: const Text("Save"),
                   ),
-                 /* ElevatedButton(
-                    onPressed: () {
-                      // Navigate to the next page if needed
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                    child: const Text("Next"),
-                  ),  */
                 ],
               ),
             ],

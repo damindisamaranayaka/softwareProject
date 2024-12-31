@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'patientMedicalHistory.dart'; // Import the PatientMedicalHistory page
+import 'package:medical_clinic_app/services/patient_service.dart';
+import 'patientMedicalHistory.dart';
 
 class GeneralPatientInformation extends StatefulWidget {
-  const GeneralPatientInformation({super.key});
+  final String patientId;
+
+  const GeneralPatientInformation({super.key, required this.patientId});
 
   @override
   _GeneralPatientInformationState createState() =>
@@ -18,8 +21,11 @@ class _GeneralPatientInformationState
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _reasonController = TextEditingController();
+  final PatientService _patientService = PatientService();
 
-  void _savePatientInfo() {
+  // Save patient info
+  Future<void> _savePatientInfo() async {
+    // Validate form inputs
     if (_selectedGender == null ||
         _monthController.text.isEmpty ||
         _dayController.text.isEmpty ||
@@ -36,18 +42,56 @@ class _GeneralPatientInformationState
       return;
     }
 
-    print("Gender: $_selectedGender");
-    print("Birth Date: ${_monthController.text}/${_dayController.text}/${_yearController.text}");
-    print("Height: ${_heightController.text} cm");
-    print("Weight: ${_weightController.text} kg");
-    print("Reason: ${_reasonController.text}");
+    // Construct birthDate as YYYY-MM-DD
+    final String year = _yearController.text.trim();
+    final String month = _monthController.text.padLeft(2, '0').trim();
+    final String day = _dayController.text.padLeft(2, '0').trim();
+    final String birthDate = "$year-$month-$day";
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Patient information saved successfully!"),
-        backgroundColor: Colors.green,
-      ),
-    );
+    // Validate birthDate format (basic YYYY-MM-DD validation)
+    final RegExp dateRegex = RegExp(r"^\d{4}-\d{2}-\d{2}$");
+    if (!dateRegex.hasMatch(birthDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Invalid birth date format. Please try again."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final patientData = {
+      "id": widget.patientId, // Use dynamically passed patient ID
+      "gender": _selectedGender,
+      "birthDate": birthDate,
+      "height": double.tryParse(_heightController.text),
+      "weight": double.tryParse(_weightController.text),
+      "reasonForVisit": _reasonController.text,
+    };
+
+    // Attempt to save data through the service
+    bool isSaved = await _patientService.savePatientInfo(patientData);
+    if (isSaved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Patient information saved successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PatientMedicalHistory(patientId: widget.patientId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to save patient information."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -178,62 +222,6 @@ class _GeneralPatientInformationState
                 ),
               ),
               const SizedBox(height: 30),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      "Back",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const PatientMedicalHistory(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      "Next",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
               Center(
                 child: ElevatedButton(
                   onPressed: _savePatientInfo,
@@ -263,8 +251,11 @@ class _GeneralPatientInformationState
     );
   }
 
-  Widget _buildTextField(
-      {String? labelText, String? hintText, TextEditingController? controller}) {
+  Widget _buildTextField({
+    String? labelText,
+    String? hintText,
+    TextEditingController? controller,
+  }) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
